@@ -1,0 +1,21 @@
+name: Copy workflow tools
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/copy-workflow-tools.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: copy-workflow-tools
+  cancel-in-progress: false
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+      - name: Copy and verify upstream source
+        run: bash scripts/copy-workflow-tools.sh
