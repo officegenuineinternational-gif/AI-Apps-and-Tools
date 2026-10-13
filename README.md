@@ -31,3 +31,21 @@ Windows setup must account for symlink support and each tool's runtime requireme
 Source copying and integrity verification completed on 14 October 2026 (Asia/Dubai).
 PC installation and live runtime testing remain pending; no production readiness is claimed.
 Do not store credentials in this public repository.
+
+## Windows installer
+The installer is prepared in [scripts/Install-WorkflowTools.ps1](scripts/Install-WorkflowTools.ps1).
+It verifies all five pinned source tree hashes and rejects tracked source changes before installation.
+It installs Python tools into separate environments, builds the AX CLI and Paperclip, and records each result in a local installation-status.json.
+
+Required commands: Git, uv, Node 24.11+, pnpm and Go (AX source requests Go 1.27.1). Paperclip native dependencies may also require Rust.
+Missing prerequisites and installation failures are reported separately per tool.
+Services, provider credentials, Kubernetes, model inference and production certification are separate subsequent steps.
+
+From PowerShell in this cloned repository:
+
+```powershell
+.\scripts\Install-WorkflowTools.ps1 -CheckOnly
+.\scripts\Install-WorkflowTools.ps1
+```
+
+Installer preparation is not evidence of installation on the office PC.
