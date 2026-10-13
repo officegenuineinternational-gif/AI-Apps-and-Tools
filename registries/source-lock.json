@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "copy_type": "tracked source snapshot, without upstream history",
+  "tools": [
+    {
+      "name": "jev-ultrafast",
+      "upstream": "https://github.com/browser-use/jev-ultrafast",
+      "commit": "1231850a0bf1a0c0341fe408ef1668dbbfdfac46",
+      "path": "vendors/jev-ultrafast",
+      "status": "source-copied"
+    },
+    {
+      "name": "laya",
+      "upstream": "https://github.com/NandhaKishorM/laya",
+      "commit": "c73908d96ff73c0062c340a11bf7c54ec7d8bc4d",
+      "path": "vendors/laya",
+      "status": "source-copied"
+    },
+    {
+      "name": "ax",
+      "upstream": "https://github.com/google/ax",
+      "commit": "ac2332829f22360ff97b0ba34d94dd0dd782f17e",
+      "path": "vendors/ax",
+      "status": "source-copied"
+    },
+    {
+      "name": "hindsight",
+      "upstream": "https://github.com/vectorize-io/hindsight",
+      "commit": "610c135b6f2d0d8b972da94146ae635943f36271",
+      "path": "vendors/hindsight",
+      "status": "source-copied"
+    },
+    {
+      "name": "paperclip",
+      "upstream": "https://github.com/paperclipai/paperclip",
+      "commit": "e0f30a4c7186498b71b2637f253b3399997dac7d",
+      "path": "vendors/paperclip",
+      "status": "source-copied"
+    }
+  ]
+}
