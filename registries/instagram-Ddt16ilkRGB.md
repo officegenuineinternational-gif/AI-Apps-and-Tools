@@ -13,8 +13,9 @@ The post caption names the following five projects. Individual carousel slides w
 | Paperclip | https://github.com/paperclipai/paperclip | Agent work management, tickets and budgets | Node 24.11+, pnpm 9.15+; clone; pnpm install; pnpm dev. Source runner also needs Rust or compatible prebuilt runner. |
 
 ## Execution status
-This file is a registry only. It does not install software or create upstream forks.
-PC installation, local clones, GitHub forks and runtime validation remain pending.
+All five tracked source snapshots are now copied into vendors/ in this repository; each Git tree hash matches its pinned upstream commit. See source-lock.json for provenance.
+The copy workflow passed: https://github.com/officegenuineinternational-gif/AI-Apps-and-Tools/actions/runs/38480876499
+These are source snapshots, without upstream history or separate GitHub fork relationships. PC installation, local cloning and runtime validation remain pending.
 Select tools when their role fits the workflow; verify actual installation and health before relying on them.
 Do not treat source download, dependency installation, a running process and production certification as the same result.
 No credentials belong in this repository.
