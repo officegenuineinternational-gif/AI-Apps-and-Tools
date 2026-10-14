@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - scripts/Install-WorkflowTools.ps1
+      - scripts/Prepare-Paperclip-Windows.mjs
       - .github/workflows/verify-windows-installer.yml
   workflow_dispatch:
 permissions:
@@ -39,6 +40,16 @@ jobs:
           $output = @(Prepare-Paperclip -Source (Join-Path $PWD 'vendors/paperclip') -Root (Join-Path $env:RUNNER_TEMP 'workflow-tools') -ExpectedTree '7f167a38e898b90855890fc609adf5267d4ea981')
           $runtime = $output[-1]
           if (-not (Test-Path (Join-Path $runtime 'pnpm-lock.yaml'))) { throw 'Repaired lockfile missing' }
+          $sharedPackage = Join-Path $runtime 'packages/shared'
+          $manifest = Get-Content -LiteralPath (Join-Path $sharedPackage 'package.json') -Raw | ConvertFrom-Json
+          if ($manifest.scripts.build -ne 'tsc && node scripts/genuine-copy-cliplab-assets.mjs') { throw 'Windows build command was not applied' }
+          Push-Location $sharedPackage
+          try {
+            Run-Native node @('scripts/genuine-copy-cliplab-assets.mjs')
+            foreach ($asset in @('LICENSE','PROVENANCE.md')) {
+              if (-not (Test-Path (Join-Path $sharedPackage ('dist/cliplab/' + $asset)))) { throw "Paperclip asset copy failed: $asset" }
+            }
+          } finally { Pop-Location }
           Run-Native git @('diff','--quiet','HEAD','--','vendors')
       - name: Build AX Linux CLI from Windows
         shell: powershell
