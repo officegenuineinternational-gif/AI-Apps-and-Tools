@@ -55,7 +55,7 @@ Office-PC logs confirm successful imports for Jev Ultrafast, Laya 0.4.6 and Hind
 
 AX's pinned source uses Unix-only process APIs and does not compile natively for Windows. The installer now builds a Linux amd64 CLI for use in a suitable WSL/Linux environment; Kubernetes and Agent Substrate are still required for operation.
 
-Paperclip's pinned source has a stale dependency lockfile. The installer preserves vendors/paperclip and copies it into the local installation root's apps/paperclip folder. It repairs the lockfile there without lifecycle scripts, validates it with frozen mode, then installs and builds using that lockfile. Lock repair passed Windows CI; the office-PC Paperclip build remains pending.
+Paperclip's pinned source has a stale dependency lockfile. The installer preserves vendors/paperclip and copies it into the local installation root's apps/paperclip folder. It repairs the lockfile there without lifecycle scripts, validates it with frozen mode, then installs and builds using that lockfile. It also replaces a Unix-only `mkdir`/`cp` build command with a Node file-copy helper in the disposable runtime, leaving the vendor snapshot unchanged. Lock repair and the Windows asset-copy check passed in [Windows CI run 38557917024](https://github.com/officegenuineinternational-gif/AI-Apps-and-Tools/actions/runs/38557917024); the office-PC Paperclip build remains pending.
 
 Retry only the two remaining tools after pulling updates:
 
