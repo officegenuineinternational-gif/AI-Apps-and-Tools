@@ -84,7 +84,10 @@ $Results = [System.Collections.Generic.List[object]]::new()
 $statusPath = Join-Path $InstallRoot 'installation-status.json'
 if (Test-Path -LiteralPath $statusPath) {
     foreach ($prior in @(Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json)) {
-        if ($Only -notcontains $prior.tool) { $Results.Add($prior) }
+        if ($null -eq $prior) { continue }
+        # Keep legacy or unknown records, but do not assume every older status has a tool field.
+        $priorTool = $prior.PSObject.Properties['tool']
+        if ($null -eq $priorTool -or $Only -notcontains [string]$priorTool.Value) { $Results.Add($prior) }
     }
 }
 foreach ($tool in $Tools) {
@@ -183,6 +186,9 @@ foreach ($tool in $Tools) {
     Write-Output ("{0}: {1} - {2}" -f $name,$state,$detail)
 }
 Write-Output ('Results: ' + (Join-Path $InstallRoot 'installation-status.json'))
-if (@($Results | Where-Object { $_.state -eq 'FAILED' }).Count -gt 0) {
+if (@($Results | Where-Object {
+    $stateProperty = $_.PSObject.Properties['state']
+    $null -ne $stateProperty -and $stateProperty.Value -eq 'FAILED'
+}).Count -gt 0) {
     throw 'One or more tool installations failed. See installation-status.json.'
 }
