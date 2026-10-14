@@ -11,7 +11,7 @@ permissions:
 jobs:
   verify:
     runs-on: windows-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Enable long paths in disposable CI checkout
         shell: powershell
@@ -31,3 +31,12 @@ jobs:
           Run-Native python @('-I','-c','import sys; print(sys.version)')
           Run-Native python @('-I','-c','import ast,sys; ast.parse(sys.argv[1]); print(1)','import jev_ultrafast; print(jev_ultrafast.__name__)')
           Run-Native python @('-I','-c','import ast,sys; ast.parse(sys.argv[1]); print(1)','import hindsight; print(hindsight.__name__)')
+      - name: Verify isolated Paperclip lockfile repair
+        shell: powershell
+        run: |
+          . ./scripts/Install-WorkflowTools.ps1 -CheckOnly -InstallRoot (Join-Path $env:RUNNER_TEMP 'workflow-tools')
+          Run-Native npm.cmd @('install','--global','pnpm@9.15.4')
+          $output = @(Prepare-Paperclip -Source (Join-Path $PWD 'vendors/paperclip') -Root (Join-Path $env:RUNNER_TEMP 'workflow-tools') -ExpectedTree '7f167a38e898b90855890fc609adf5267d4ea981')
+          $runtime = $output[-1]
+          if (-not (Test-Path (Join-Path $runtime 'pnpm-lock.yaml'))) { throw 'Repaired lockfile missing' }
+          Run-Native git @('diff','--quiet','HEAD','--','vendors')
