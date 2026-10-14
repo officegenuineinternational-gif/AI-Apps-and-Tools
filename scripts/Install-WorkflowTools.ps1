@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [string]$InstallRoot = (Join-Path $env:LOCALAPPDATA 'GenuineWorkflowTools'),
-    [switch]$CheckOnly
+    [switch]$CheckOnly,
+    [ValidateSet('jev-ultrafast','laya','ax','hindsight','paperclip')]
+    [string[]]$Only = @('jev-ultrafast','laya','ax','hindsight','paperclip')
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -14,9 +16,43 @@ function Run-Native {
 function Require-Command {
     param([string]$Name)
     $found = Get-Command $Name -ErrorAction SilentlyContinue
+    if (-not $found -and $Name -eq 'go') {
+        foreach ($base in @($env:ProgramFiles, [Environment]::GetFolderPath('ProgramFiles'))) {
+            if ($base) {
+                $candidate = Join-Path $base 'Go/bin/go.exe'
+                if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+            }
+        }
+    }
     if (-not $found) { throw "Required command missing: $Name" }
     return $found.Source
 }
+
+function Prepare-Paperclip {
+    param([string]$Source, [string]$Root, [string]$ExpectedTree)
+    $runtime = Join-Path $Root 'apps/paperclip'
+    $marker = Join-Path $runtime '.genuine-source-tree'
+    if (Test-Path -LiteralPath $runtime) {
+        if (-not (Test-Path -LiteralPath $marker) -or (Get-Content -LiteralPath $marker -Raw).Trim() -ne $ExpectedTree) {
+            throw 'Existing Paperclip installation does not match the pinned source; preserving it.'
+        }
+    } else {
+        New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+        & robocopy.exe $Source $runtime /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP /XD node_modules .git
+        if ($LASTEXITCODE -gt 7) { throw "Paperclip source copy failed: $LASTEXITCODE" }
+        Set-Content -LiteralPath $marker -Value $ExpectedTree -Encoding ASCII
+    }
+    $pnpm = Require-Command 'pnpm'
+    Push-Location $runtime
+    try {
+        # Repair only the disposable installation copy; preserve verified vendor source.
+        # Subsequent dependency installation still requires a consistent frozen lockfile.
+        Run-Native $pnpm @('install','--lockfile-only','--ignore-scripts','--no-frozen-lockfile')
+        Run-Native $pnpm @('install','--lockfile-only','--ignore-scripts','--frozen-lockfile')
+    } finally { Pop-Location }
+    return $runtime
+}
+
 $Tools = @(
     @{ Name='jev-ultrafast'; Tree='987b481ed8ef400911ca471bce38c7adfdabc45c' },
     @{ Name='laya'; Tree='a3c658bd9c314962e37e7c486585ee09e3bab840' },
@@ -43,6 +79,7 @@ if ($CheckOnly) {
 New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
 $Results = [System.Collections.Generic.List[object]]::new()
 foreach ($tool in $Tools) {
+    if ($Only -notcontains $tool.Name) { continue }
     $name = $tool.Name
     $source = Join-Path $RepoRoot ("vendors/" + $name)
     $environment = Join-Path $InstallRoot ("envs/" + $name)
@@ -106,8 +143,13 @@ foreach ($tool in $Tools) {
                 if ($LASTEXITCODE -ne 0 -or [version]$version -lt [version]'24.11.0') {
                     throw 'Paperclip requires Node 24.11 or newer.'
                 }
-                Run-Native $pnpm @('install','--frozen-lockfile')
-                Run-Native $pnpm @('build')
+                $runtimeOutput = @(Prepare-Paperclip -Source $source -Root $InstallRoot -ExpectedTree $tool.Tree)
+                $runtime = $runtimeOutput[-1]
+                Push-Location $runtime
+                try {
+                    Run-Native $pnpm @('install','--frozen-lockfile')
+                    Run-Native $pnpm @('build')
+                } finally { Pop-Location }
                 $state='BUILT'
                 $detail='Dependencies and build passed. Service startup and runtime testing remain pending.'
             }
