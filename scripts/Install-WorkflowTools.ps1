@@ -28,6 +28,20 @@ function Require-Command {
     return $found.Source
 }
 
+function Get-PreservedInstallResults {
+    param([object[]]$Previous, [string[]]$Selected)
+    $preserved = [System.Collections.Generic.List[object]]::new()
+    foreach ($prior in $Previous) {
+        if ($null -eq $prior) { continue }
+        # Keep legacy or unknown records, but do not assume every older status has a tool field.
+        $priorTool = $prior.PSObject.Properties['tool']
+        if ($null -eq $priorTool -or $Selected -notcontains [string]$priorTool.Value) {
+            $preserved.Add($prior)
+        }
+    }
+    return ,$preserved.ToArray()
+}
+
 function Prepare-Paperclip {
     param([string]$Source, [string]$Root, [string]$ExpectedTree)
     $runtime = Join-Path $Root 'apps/paperclip'
@@ -83,11 +97,9 @@ New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
 $Results = [System.Collections.Generic.List[object]]::new()
 $statusPath = Join-Path $InstallRoot 'installation-status.json'
 if (Test-Path -LiteralPath $statusPath) {
-    foreach ($prior in @(Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json)) {
-        if ($null -eq $prior) { continue }
-        # Keep legacy or unknown records, but do not assume every older status has a tool field.
-        $priorTool = $prior.PSObject.Properties['tool']
-        if ($null -eq $priorTool -or $Only -notcontains [string]$priorTool.Value) { $Results.Add($prior) }
+    $previous = @(Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json)
+    foreach ($prior in (Get-PreservedInstallResults -Previous $previous -Selected $Only)) {
+        $Results.Add($prior)
     }
 }
 foreach ($tool in $Tools) {
