@@ -4,6 +4,29 @@ import path from 'node:path';
 const runtime = process.argv[2];
 if (!runtime) throw new Error('Usage: node Prepare-Paperclip-Windows.mjs <runtime-directory>');
 
+async function normalizeSourceLineEndings(root) {
+  const pending = [root];
+  while (pending.length > 0) {
+    const directory = pending.pop();
+    for (const entry of await fs.promises.readdir(directory, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) continue;
+      const filePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== 'node_modules' && entry.name !== '.git') pending.push(filePath);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const bytes = await fs.promises.readFile(filePath);
+      if (bytes.includes(0)) continue;
+      const text = bytes.toString('utf8');
+      if (!Buffer.from(text, 'utf8').equals(bytes) || !text.includes('\\r\\n')) continue;
+      await fs.promises.writeFile(filePath, text.replace(/\\r\\n/g, '\\n'), 'utf8');
+    }
+  }
+}
+
+await normalizeSourceLineEndings(runtime);
+
 const packageDir = path.join(runtime, 'packages', 'shared');
 const manifestPath = path.join(packageDir, 'package.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
