@@ -179,11 +179,24 @@ foreach ($tool in $Tools) {
                 }
                 $runtimeOutput = @(Prepare-Paperclip -Source $source -Root $InstallRoot -ExpectedTree $tool.Tree)
                 $runtime = $runtimeOutput[-1]
+                $git = Require-Command 'git'
+                $gitRoot = Split-Path -Parent (Split-Path -Parent $git)
+                $bash = Join-Path $gitRoot 'bin/bash.exe'
+                if (-not (Test-Path -LiteralPath $bash -PathType Leaf)) {
+                    throw 'Paperclip build scripts require Git for Windows bash.exe.'
+                }
+                $previousScriptShell = [Environment]::GetEnvironmentVariable('npm_config_script_shell','Process')
                 Push-Location $runtime
                 try {
+                    # Paperclip includes Unix shell commands; use Git Bash only for this install/build process.
+                    $env:npm_config_script_shell = $bash
                     Run-Native $pnpm @('install','--frozen-lockfile')
+                    Run-Native $pnpm @('--filter','@paperclipai/paperclip-runner','run','generate:protocol-manifest')
                     Run-Native $pnpm @('build')
-                } finally { Pop-Location }
+                } finally {
+                    [Environment]::SetEnvironmentVariable('npm_config_script_shell',$previousScriptShell,'Process')
+                    Pop-Location
+                }
                 $state='BUILT'
                 $detail='Dependencies and build passed. Service startup and runtime testing remain pending.'
             }
