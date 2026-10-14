@@ -55,9 +55,9 @@ Office-PC logs confirm successful imports for Jev Ultrafast, Laya 0.4.6 and Hind
 
 AX's pinned source uses Unix-only process APIs and does not compile natively for Windows. The installer now builds a Linux amd64 CLI for use in a suitable WSL/Linux environment; Kubernetes and Agent Substrate are still required for operation.
 
-Paperclip's pinned source has a stale dependency lockfile. The installer preserves vendors/paperclip and copies it into the local installation root's apps/paperclip folder. It repairs the lockfile there without lifecycle scripts, validates it with frozen mode, then installs and builds using that lockfile. It also replaces a Unix-only `mkdir`/`cp` build command with a Node file-copy helper in the disposable runtime, leaving the vendor snapshot unchanged. Lock repair and the Windows asset-copy check passed in [Windows CI run 38557917024](https://github.com/officegenuineinternational-gif/AI-Apps-and-Tools/actions/runs/38557917024); the office-PC Paperclip build remains pending.
+Paperclip's pinned source has a stale dependency lockfile. The installer preserves vendors/paperclip and copies it into the local installation root's apps/paperclip folder. It repairs the lockfile there without lifecycle scripts, validates it with frozen mode, then installs and builds using that lockfile. The Windows runtime copy also normalizes line endings for generated-file checks, refreshes the derived PRP protocol manifest, replaces one Unix-only file-copy command with a Node helper, and runs Unix package scripts through Git Bash. The pinned vendor snapshot remains unchanged. Windows CI verified legacy status-file handling, Git Bash script execution, source blob integrity, lock repair, asset copying and the AX cross-build in [run 38559690237](https://github.com/officegenuineinternational-gif/AI-Apps-and-Tools/actions/runs/38559690237). The office-PC Paperclip build remains pending.
 
-Retry only the two remaining tools after pulling updates:
+Retry the remaining Paperclip build after pulling updates:
 
 ```powershell
 git pull --ff-only
