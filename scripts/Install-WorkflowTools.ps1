@@ -78,6 +78,12 @@ if ($CheckOnly) {
 }
 New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
 $Results = [System.Collections.Generic.List[object]]::new()
+$statusPath = Join-Path $InstallRoot 'installation-status.json'
+if (Test-Path -LiteralPath $statusPath) {
+    foreach ($prior in @(Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json)) {
+        if ($Only -notcontains $prior.tool) { $Results.Add($prior) }
+    }
+}
 foreach ($tool in $Tools) {
     if ($Only -notcontains $tool.Name) { continue }
     $name = $tool.Name
@@ -117,11 +123,21 @@ foreach ($tool in $Tools) {
                 $go = Require-Command 'go'
                 $bin = Join-Path $InstallRoot 'bin'
                 New-Item -ItemType Directory -Path $bin -Force | Out-Null
-                $binary = Join-Path $bin 'ax.exe'
-                Run-Native $go @('build','-o',$binary,'./cmd/ax')
-                if (-not (Test-Path $binary)) { throw 'AX binary not produced.' }
+                # This upstream revision uses Unix-only syscalls; build for Linux/WSL.
+                $binary = Join-Path $bin 'ax-linux-amd64'
+                $previousOS = [Environment]::GetEnvironmentVariable('GOOS','Process')
+                $previousArch = [Environment]::GetEnvironmentVariable('GOARCH','Process')
+                try {
+                    $env:GOOS = 'linux'
+                    $env:GOARCH = 'amd64'
+                    Run-Native $go @('build','-o',$binary,'./cmd/ax')
+                } finally {
+                    [Environment]::SetEnvironmentVariable('GOOS',$previousOS,'Process')
+                    [Environment]::SetEnvironmentVariable('GOARCH',$previousArch,'Process')
+                }
+                if (-not (Test-Path $binary)) { throw 'AX Linux binary not produced.' }
                 $state='BUILT'
-                $detail='CLI built. Kubernetes and Agent Substrate readiness remain pending.'
+                $detail='Linux CLI built for WSL. Linux execution, Kubernetes and Agent Substrate readiness remain pending.'
             }
             'hindsight' {
                 $uv = Require-Command 'uv'
