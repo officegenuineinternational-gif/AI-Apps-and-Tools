@@ -33,18 +33,33 @@ async function normalizeSourceLineEndings(root) {
 
 await normalizeSourceLineEndings(runtime);
 
-// Serialize the dependency-aware workspace build on Windows. The runner's build
-// rebuilds the eval kernel and then loads its compiled outputs in a coverage
-// check; concurrent workspace builds can expose partially written modules.
-const rootManifestPath = path.join(runtime, 'package.json');
-const rootManifest = JSON.parse(fs.readFileSync(rootManifestPath, 'utf8'));
-const upstreamRootBuild = 'pnpm run preflight:workspace-links && pnpm -r build';
-const windowsRootBuild = 'pnpm run preflight:workspace-links && pnpm --workspace-concurrency=1 -r build';
-if (rootManifest.scripts?.build !== upstreamRootBuild && rootManifest.scripts?.build !== windowsRootBuild) {
-  throw new Error('Paperclip root build script differs from the pinned upstream version; refusing to patch it.');
+// Node's ESM loader rejects a raw absolute Windows path as a module URL.
+// Scope a path-to-file-URL resolver to the runner's generated coverage check.
+const runnerDir = path.join(runtime, 'packages', 'paperclip-runner');
+const runnerManifestPath = path.join(runnerDir, 'package.json');
+const runnerManifest = JSON.parse(fs.readFileSync(runnerManifestPath, 'utf8'));
+const upstreamCoverageCheck = 'node scripts/generate-protocol-coverage.mjs --check';
+const windowsCoverageCheck = 'node --loader ./scripts/genuine-windows-path-loader.mjs scripts/generate-protocol-coverage.mjs --check';
+if (runnerManifest.scripts?.['check:protocol-coverage'] !== upstreamCoverageCheck &&
+    runnerManifest.scripts?.['check:protocol-coverage'] !== windowsCoverageCheck) {
+  throw new Error('Paperclip protocol coverage check differs from the pinned upstream version; refusing to patch it.');
 }
-rootManifest.scripts.build = windowsRootBuild;
-fs.writeFileSync(rootManifestPath, JSON.stringify(rootManifest, null, 2) + '\n', 'utf8');
+runnerManifest.scripts['check:protocol-coverage'] = windowsCoverageCheck;
+fs.writeFileSync(runnerManifestPath, JSON.stringify(runnerManifest, null, 2) + '\n', 'utf8');
+
+const loaderPath = path.join(runnerDir, 'scripts', 'genuine-windows-path-loader.mjs');
+const loaderSource = [
+  "import { pathToFileURL } from 'node:url';",
+  '',
+  'export async function resolve(specifier, context, nextResolve) {',
+  '  if (/^[A-Za-z]:[\\\\/]/.test(specifier)) {',
+  '    return nextResolve(pathToFileURL(specifier).href, context);',
+  '  }',
+  '  return nextResolve(specifier, context);',
+  '}',
+  '',
+].join('\\n');
+fs.writeFileSync(loaderPath, loaderSource, 'utf8');
 
 const packageDir = path.join(runtime, 'packages', 'shared');
 const manifestPath = path.join(packageDir, 'package.json');
