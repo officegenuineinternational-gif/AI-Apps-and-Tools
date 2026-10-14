@@ -57,7 +57,7 @@ foreach ($tool in $Tools) {
                 try {
                     $env:UV_PROJECT_ENVIRONMENT = $environment
                     Run-Native $uv @('sync','--locked','--no-dev')
-                    Run-Native $uv @('run','--no-sync','python','-I','-c','import jev_ultrafast; print("jev import OK")')
+                    Run-Native $uv @('run','--no-sync','python','-I','-c','import jev_ultrafast; print(jev_ultrafast.__name__)')
                 } finally {
                     [Environment]::SetEnvironmentVariable('UV_PROJECT_ENVIRONMENT',$previous,'Process')
                 }
@@ -92,7 +92,7 @@ foreach ($tool in $Tools) {
                 try {
                     $env:UV_PROJECT_ENVIRONMENT = $environment
                     Run-Native $uv @('sync','--locked','--no-dev','--package','hindsight-all')
-                    Run-Native $uv @('run','--no-sync','--package','hindsight-all','python','-I','-c','import hindsight; print("hindsight import OK")')
+                    Run-Native $uv @('run','--no-sync','--package','hindsight-all','python','-I','-c','import hindsight; print(hindsight.__name__)')
                 } finally {
                     [Environment]::SetEnvironmentVariable('UV_PROJECT_ENVIRONMENT',$previous,'Process')
                 }
