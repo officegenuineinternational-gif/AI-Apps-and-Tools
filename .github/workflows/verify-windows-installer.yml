@@ -10,12 +10,15 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 5
     steps:
+      - name: Enable long paths in disposable CI checkout
+        shell: powershell
+        run: git config --global core.longpaths true
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Parse PowerShell and check source integrity without installing
-        shell: pwsh
+        shell: powershell
         run: |
           $tokens = $null
           $parseErrors = $null
@@ -24,4 +27,7 @@ jobs:
             [ref]$tokens, [ref]$parseErrors
           ) | Out-Null
           if ($parseErrors.Count -gt 0) { throw ($parseErrors | Out-String) }
-          ./scripts/Install-WorkflowTools.ps1 -CheckOnly -InstallRoot (Join-Path $env:RUNNER_TEMP 'workflow-tools')
+          . ./scripts/Install-WorkflowTools.ps1 -CheckOnly -InstallRoot (Join-Path $env:RUNNER_TEMP 'workflow-tools')
+          Run-Native python @('-I','-c','import sys; print(sys.version)')
+          Run-Native python @('-I','-c','import ast,sys; ast.parse(sys.argv[1]); print(1)','import jev_ultrafast; print(jev_ultrafast.__name__)')
+          Run-Native python @('-I','-c','import ast,sys; ast.parse(sys.argv[1]); print(1)','import hindsight; print(hindsight.__name__)')
