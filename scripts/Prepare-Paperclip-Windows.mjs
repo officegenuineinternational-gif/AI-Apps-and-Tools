@@ -33,6 +33,19 @@ async function normalizeSourceLineEndings(root) {
 
 await normalizeSourceLineEndings(runtime);
 
+// Serialize the dependency-aware workspace build on Windows. The runner's build
+// rebuilds the eval kernel and then loads its compiled outputs in a coverage
+// check; concurrent workspace builds can expose partially written modules.
+const rootManifestPath = path.join(runtime, 'package.json');
+const rootManifest = JSON.parse(fs.readFileSync(rootManifestPath, 'utf8'));
+const upstreamRootBuild = 'pnpm run preflight:workspace-links && pnpm -r build';
+const windowsRootBuild = 'pnpm run preflight:workspace-links && pnpm --workspace-concurrency=1 -r build';
+if (rootManifest.scripts?.build !== upstreamRootBuild && rootManifest.scripts?.build !== windowsRootBuild) {
+  throw new Error('Paperclip root build script differs from the pinned upstream version; refusing to patch it.');
+}
+rootManifest.scripts.build = windowsRootBuild;
+fs.writeFileSync(rootManifestPath, JSON.stringify(rootManifest, null, 2) + '\n', 'utf8');
+
 const packageDir = path.join(runtime, 'packages', 'shared');
 const manifestPath = path.join(packageDir, 'package.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
