@@ -42,6 +42,9 @@ function Prepare-Paperclip {
         if ($LASTEXITCODE -gt 7) { throw "Paperclip source copy failed: $LASTEXITCODE" }
         Set-Content -LiteralPath $marker -Value $ExpectedTree -Encoding ASCII
     }
+    # Keep the pinned vendor snapshot unchanged; patch only the runnable Windows copy.
+    $node = Require-Command 'node'
+    Run-Native $node @((Join-Path $RepoRoot 'scripts/Prepare-Paperclip-Windows.mjs'), $runtime)
     $pnpm = Require-Command 'pnpm'
     Push-Location $runtime
     try {
