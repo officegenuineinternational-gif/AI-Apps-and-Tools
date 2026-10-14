@@ -19,8 +19,14 @@ async function normalizeSourceLineEndings(root) {
       const bytes = await fs.promises.readFile(filePath);
       if (bytes.includes(0)) continue;
       const text = bytes.toString('utf8');
-      if (!Buffer.from(text, 'utf8').equals(bytes) || !text.includes('\\r\\n')) continue;
-      await fs.promises.writeFile(filePath, text.replace(/\\r\\n/g, '\\n'), 'utf8');
+      if (!Buffer.from(text, 'utf8').equals(bytes)) continue;
+      const normalized = text.replace(/\r\n/g, '\n');
+      const withoutMarkdownBom = /\.(?:md|mdx)$/i.test(filePath) && normalized.startsWith('\uFEFF')
+        ? normalized.slice(1)
+        : normalized;
+      if (withoutMarkdownBom !== text) {
+        await fs.promises.writeFile(filePath, withoutMarkdownBom, 'utf8');
+      }
     }
   }
 }
