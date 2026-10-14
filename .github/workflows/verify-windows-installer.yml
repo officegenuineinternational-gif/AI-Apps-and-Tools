@@ -69,6 +69,14 @@ jobs:
           $expectedBlob = (& $git rev-parse ('HEAD:vendors/paperclip/' + $relativeSchema)).Trim()
           $runtimeBlob = (& $git hash-object (Join-Path $runtime $relativeSchema)).Trim()
           if ($expectedBlob -ne $runtimeBlob) { throw 'Paperclip runtime did not preserve the pinned LF source bytes' }
+          $frontmatterPath = Join-Path $runtime 'packages/teams-catalog/catalog/bundled/company-defaults/core-exec-team/TEAM.md'
+          $frontmatterText = [IO.File]::ReadAllText($frontmatterPath)
+          [IO.File]::WriteAllText($frontmatterPath, [string][char]0xFEFF + $frontmatterText.Replace("`n","`r`n"), [Text.UTF8Encoding]::new($false))
+          Run-Native node @((Join-Path $PWD 'scripts/Prepare-Paperclip-Windows.mjs'), $runtime)
+          $lf = [string][char]10
+          if (-not [IO.File]::ReadAllText($frontmatterPath).StartsWith('---' + $lf)) {
+            throw 'Paperclip Windows preparation did not remove a Markdown BOM and normalize CRLF frontmatter'
+          }
           if (-not (Test-Path (Join-Path $runtime 'pnpm-lock.yaml'))) { throw 'Repaired lockfile missing' }
           $sharedPackage = Join-Path $runtime 'packages/shared'
           $manifest = Get-Content -LiteralPath (Join-Path $sharedPackage 'package.json') -Raw | ConvertFrom-Json
