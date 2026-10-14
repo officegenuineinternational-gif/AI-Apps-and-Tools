@@ -58,7 +58,7 @@ const loaderSource = [
   '  return nextResolve(specifier, context);',
   '}',
   '',
-].join('\\n');
+].join('\n');
 fs.writeFileSync(loaderPath, loaderSource, 'utf8');
 
 const packageDir = path.join(runtime, 'packages', 'shared');
