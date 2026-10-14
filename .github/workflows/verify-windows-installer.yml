@@ -84,12 +84,14 @@ jobs:
             throw 'Windows ESM path loader was not applied to protocol coverage'
           }
           $loader = Join-Path $runnerPackage 'scripts/genuine-windows-path-loader.mjs'
-          $probeTarget = Join-Path $env:RUNNER_TEMP 'raw-windows-esm-target.mjs'
-          $probeEntry = Join-Path $env:RUNNER_TEMP 'raw-windows-esm-entry.mjs'
+          $probeTarget = Join-Path $runnerPackage 'scripts/genuine-windows-esm-target.mjs'
+          $probeEntry = Join-Path $runnerPackage 'scripts/genuine-windows-esm-entry.mjs'
           [IO.File]::WriteAllText($probeTarget, "export default 'windows-path-ok';", [Text.UTF8Encoding]::new($false))
           $rawSpecifier = $probeTarget.Replace('\','/')
           [IO.File]::WriteAllText($probeEntry, "import value from '$rawSpecifier'; if (value !== 'windows-path-ok') throw new Error('bad probe');", [Text.UTF8Encoding]::new($false))
-          Run-Native node @('--loader', $loader, $probeEntry)
+          Push-Location $runnerPackage
+          try { Run-Native node @('--loader', './scripts/genuine-windows-path-loader.mjs', './scripts/genuine-windows-esm-entry.mjs') } finally { Pop-Location }
+          Remove-Item -LiteralPath $probeTarget, $probeEntry
           $sharedPackage = Join-Path $runtime 'packages/shared'
           $manifest = Get-Content -LiteralPath (Join-Path $sharedPackage 'package.json') -Raw | ConvertFrom-Json
           if ($manifest.scripts.build -ne 'tsc && node scripts/genuine-copy-cliplab-assets.mjs') { throw 'Windows build command was not applied' }
