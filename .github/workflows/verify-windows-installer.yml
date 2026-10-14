@@ -40,3 +40,10 @@ jobs:
           $runtime = $output[-1]
           if (-not (Test-Path (Join-Path $runtime 'pnpm-lock.yaml'))) { throw 'Repaired lockfile missing' }
           Run-Native git @('diff','--quiet','HEAD','--','vendors')
+      - name: Build AX Linux CLI from Windows
+        shell: powershell
+        run: |
+          ./scripts/Install-WorkflowTools.ps1 -Only ax -InstallRoot (Join-Path $env:RUNNER_TEMP 'workflow-tools')
+          $binary = Join-Path $env:RUNNER_TEMP 'workflow-tools/bin/ax-linux-amd64'
+          $bytes = [IO.File]::ReadAllBytes($binary)
+          if (($bytes[0..3] -join ',') -ne '127,69,76,70') { throw 'AX output is not a Linux ELF binary' }
