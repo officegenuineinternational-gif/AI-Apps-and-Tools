@@ -87,7 +87,7 @@ jobs:
           $probeTarget = Join-Path $env:RUNNER_TEMP 'raw-windows-esm-target.mjs'
           $probeEntry = Join-Path $env:RUNNER_TEMP 'raw-windows-esm-entry.mjs'
           [IO.File]::WriteAllText($probeTarget, "export default 'windows-path-ok';", [Text.UTF8Encoding]::new($false))
-          $rawSpecifier = $probeTarget.Replace('','/')
+          $rawSpecifier = $probeTarget.Replace('\\','/')
           [IO.File]::WriteAllText($probeEntry, "import value from '$rawSpecifier'; if (value !== 'windows-path-ok') throw new Error('bad probe');", [Text.UTF8Encoding]::new($false))
           Run-Native node @('--loader', $loader, $probeEntry)
           $sharedPackage = Join-Path $runtime 'packages/shared'
