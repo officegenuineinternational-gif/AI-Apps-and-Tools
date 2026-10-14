@@ -78,6 +78,10 @@ jobs:
             throw 'Paperclip Windows preparation did not remove a Markdown BOM and normalize CRLF frontmatter'
           }
           if (-not (Test-Path (Join-Path $runtime 'pnpm-lock.yaml'))) { throw 'Repaired lockfile missing' }
+          $rootManifest = Get-Content -LiteralPath (Join-Path $runtime 'package.json') -Raw | ConvertFrom-Json
+          if ($rootManifest.scripts.build -ne 'pnpm run preflight:workspace-links && pnpm --workspace-concurrency=1 -r build') {
+            throw 'Windows Paperclip build was not serialized'
+          }
           $sharedPackage = Join-Path $runtime 'packages/shared'
           $manifest = Get-Content -LiteralPath (Join-Path $sharedPackage 'package.json') -Raw | ConvertFrom-Json
           if ($manifest.scripts.build -ne 'tsc && node scripts/genuine-copy-cliplab-assets.mjs') { throw 'Windows build command was not applied' }
