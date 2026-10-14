@@ -46,8 +46,29 @@ jobs:
         run: |
           . ./scripts/Install-WorkflowTools.ps1 -CheckOnly -InstallRoot (Join-Path $env:RUNNER_TEMP 'workflow-tools')
           Run-Native npm.cmd @('install','--global','pnpm@9.15.4')
+          $git = Require-Command 'git'
+          $gitRoot = Split-Path -Parent (Split-Path -Parent $git)
+          $bash = Join-Path $gitRoot 'bin/bash.exe'
+          if (-not (Test-Path -LiteralPath $bash -PathType Leaf)) { throw 'Git Bash missing from Windows runner' }
+          $shellTest = Join-Path $env:RUNNER_TEMP 'pnpm-bash-test'
+          New-Item -ItemType Directory -Path $shellTest -Force | Out-Null
+          Set-Content -LiteralPath (Join-Path $shellTest 'package.json') -Value '{"name":"shell-test","version":"1.0.0","scripts":{"build":"mkdir -p dist/fixture && cp source.txt dist/fixture/copied.txt"}}' -Encoding ASCII
+          Set-Content -LiteralPath (Join-Path $shellTest 'source.txt') -Value 'bash shell works' -Encoding ASCII
+          $previousScriptShell = [Environment]::GetEnvironmentVariable('npm_config_script_shell','Process')
+          try {
+            $env:npm_config_script_shell = $bash
+            Push-Location $shellTest
+            try { Run-Native pnpm @('run','build') } finally { Pop-Location }
+          } finally { [Environment]::SetEnvironmentVariable('npm_config_script_shell',$previousScriptShell,'Process') }
+          if ((Get-Content -LiteralPath (Join-Path $shellTest 'dist/fixture/copied.txt') -Raw).Trim() -ne 'bash shell works') {
+            throw 'pnpm did not run the test build script through Git Bash'
+          }
           $output = @(Prepare-Paperclip -Source (Join-Path $PWD 'vendors/paperclip') -Root (Join-Path $env:RUNNER_TEMP 'workflow-tools') -ExpectedTree '7f167a38e898b90855890fc609adf5267d4ea981')
           $runtime = $output[-1]
+          $relativeSchema = 'packages/paperclip-runner/protocol/schemas/request.schema.json'
+          $expectedBlob = (& $git rev-parse ('HEAD:vendors/paperclip/' + $relativeSchema)).Trim()
+          $runtimeBlob = (& $git hash-object (Join-Path $runtime $relativeSchema)).Trim()
+          if ($expectedBlob -ne $runtimeBlob) { throw 'Paperclip runtime did not preserve the pinned LF source bytes' }
           if (-not (Test-Path (Join-Path $runtime 'pnpm-lock.yaml'))) { throw 'Repaired lockfile missing' }
           $sharedPackage = Join-Path $runtime 'packages/shared'
           $manifest = Get-Content -LiteralPath (Join-Path $sharedPackage 'package.json') -Raw | ConvertFrom-Json
