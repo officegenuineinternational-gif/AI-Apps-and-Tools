@@ -49,3 +49,17 @@ From PowerShell in this cloned repository:
 ```
 
 Installer preparation is not evidence of installation on the office PC.
+
+## Windows installation findings (14 October 2026)
+Office-PC logs confirm successful imports for Jev Ultrafast, Laya 0.4.6 and Hindsight, plus Laya dependency compatibility. Services and inference remain unverified.
+
+AX's pinned source uses Unix-only process APIs and does not compile natively for Windows. The installer now builds a Linux amd64 CLI for use in a suitable WSL/Linux environment; Kubernetes and Agent Substrate are still required for operation.
+
+Paperclip's pinned source has a stale dependency lockfile. The installer preserves vendors/paperclip and copies it into the local installation root's apps/paperclip folder. It repairs the lockfile there without lifecycle scripts, validates it with frozen mode, then installs and builds using that lockfile. Lock repair passed Windows CI; the office-PC Paperclip build remains pending.
+
+Retry only the two remaining tools after pulling updates:
+
+```powershell
+git pull --ff-only
+.\scripts\Install-WorkflowTools.ps1 -Only ax,paperclip
+```
