@@ -39,7 +39,7 @@ function Get-PreservedInstallResults {
             $preserved.Add($prior)
         }
     }
-    return ,$preserved.ToArray()
+    return $preserved.ToArray()
 }
 
 function Prepare-Paperclip {
